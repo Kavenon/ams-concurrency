@@ -194,6 +194,11 @@
 					AC05A15D2008AF2B00FCC424 = {
 						CreatedOnToolsVersion = 8.2.1;
 						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+						};
 					};
 					AC05A1712008AF2C00FCC424 = {
 						CreatedOnToolsVersion = 8.2.1;
@@ -505,6 +510,7 @@
 				AC05A1882008AF2C00FCC424 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		AC05A1892008AF2C00FCC424 /* Build configuration list for PBXNativeTarget "AmsConcurrencyTests" */ = {
 			isa = XCConfigurationList;
@@ -513,6 +519,7 @@
 				AC05A18B2008AF2C00FCC424 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		AC05A18C2008AF2C00FCC424 /* Build configuration list for PBXNativeTarget "AmsConcurrencyUITests" */ = {
 			isa = XCConfigurationList;
@@ -521,6 +528,7 @@
 				AC05A18E2008AF2C00FCC424 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
