@@ -175,6 +175,24 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
               
     }
     
+    var handlers: [String: () -> Swift.Void] = [:]
+    
+    public func queueCompleteHandler(id: String, cb: @escaping () -> Swift.Void){
+        handlers[id] = cb;
+        
+    }
+    public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        print("finish events for \(session)")
+        let identifier = session.configuration.identifier!
+        if let handler = handlers[identifier] {
+            print("FIRED HANDLER")
+            handlers.removeValue(forKey: identifier)
+            handler()
+        }
+        
+        
+    }
+    
     public func handleAppActive(){
         print("Running FD queue")
         DispatchQueue.main.async {

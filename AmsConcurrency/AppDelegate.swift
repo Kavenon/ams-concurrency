@@ -14,7 +14,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
 
+    
     public func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Swift.Void) {
+        
+        let ctrl = (window?.rootViewController as? ViewController)
+                print("-- handleEventsForBackgroundURLSession --")
+//        var backgroundConfiguration = URLSessionConfiguration.background(withIdentifier: identifier)
+//        var backgroundSession = URLSession(configuration: backgroundConfiguration, delegate: ctrl, delegateQueue: nil)
+//        print("Rejoining session \(backgroundSession)")
+//        
+        ctrl?.queueCompleteHandler(id: identifier, cb: completionHandler);
+        
         
     }
     
