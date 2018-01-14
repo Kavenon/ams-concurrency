@@ -40,7 +40,20 @@ class ViewController: UIViewController, URLSessionDownloadDelegate {
     }
     
     func elapsedTime() -> Double {
-        return Date().timeIntervalSince1970 - timer;
+        return (round((Date().timeIntervalSince1970 - timer)*10000)/10000);
+    }
+
+    func faceDetect(file: URL){
+        
+        print("\(elapsedTime()) started FC of file \(file)")
+        
+        let detector = CIDetector(ofType: "CIDetectorTypeFace", context: nil, options: [CIDetectorAccuracy: CIDetectorAccuracyHigh])
+        
+        let image = CIImage(contentsOf: file)
+        let features = detector?.features(in: image!)
+        
+        print("\(elapsedTime()) finished FC of file \(file) detected count: \(features?.count)")
+        
     }
     
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
@@ -49,25 +62,43 @@ class ViewController: UIViewController, URLSessionDownloadDelegate {
         print("\(elapsedTime()) finished download of file \(location)")
         let docDir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
 
-        var path = docDir.appending("/myflies/").appending((downloadTask.response?.suggestedFilename)!)
+        var path = docDir.appending("/").appending((downloadTask.response?.suggestedFilename)!)
         let fileManager = FileManager.default
         
         if(fileManager.fileExists(atPath: path)){
-            path = docDir.appending("/myflies/").appending(String(Date().timeIntervalSince1970)).appending((downloadTask.response?.suggestedFilename)!)
+            path = docDir.appending("/").appending(String(Date().timeIntervalSince1970)).appending((downloadTask.response?.suggestedFilename)!)
         }
         
-        let pathUrl = URL(string:path)
+        let pathUrl = URL(fileURLWithPath:path)
         
-        try? fileManager.copyItem(at: location, to: pathUrl!)
-        try? fileManager.removeItem(at: location)
+        do {
+           try fileManager.moveItem(at: location, to: pathUrl)
+        }
+        catch {
+            let serror = error as NSError
+            print("Could not save \(serror.localizedDescription)")
+        }
         
         print("\(elapsedTime()) finished copying file \(path)")
 
+        // todo: add in some queue
+        faceDetect(file: pathUrl)
               
     }
     
-   
+    var reachedHalf = [URL: Bool]()
+    
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64){
+        
+        let url = downloadTask.currentRequest?.url
+        let downloadRatio = Double(totalBytesWritten/totalBytesExpectedToWrite);
+        if downloadRatio >= 0.5 && reachedHalf[url!] == nil {
+            reachedHalf[url!] = true
+            print("\(elapsedTime()) donwloaded 50% \(url)")
+            
+        }
+
+        
         
     }
     
