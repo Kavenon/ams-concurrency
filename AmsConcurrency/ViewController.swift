@@ -17,11 +17,13 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
         "https://upload.wikimedia.org/wikipedia/commons/3/36/Quentin_Matsys_-_A_Grotesque_old_woman.jpg",
         "https://upload.wikimedia.org/wikipedia/commons/c/c8/Valmy_Battle_painting.jpg"
     ]
+    var fdQueue: [String] = [];
     
     var timer: TimeInterval = 0.0;
     var entities = [URLSessionDownloadTask]()
     
     var downloadState: [String: DownloadState] = [:]
+    var bgFacedetection: [String: UIBackgroundTaskIdentifier] = [:]
     
     @IBAction func onClickStart(_ sender: Any) {
         timer = Date().timeIntervalSince1970
@@ -71,31 +73,56 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
         return (round((Date().timeIntervalSince1970 - timer)*10000)/10000);
     }
 
-    func faceDetect(image: UIImage, task: URLSessionDownloadTask){
+    func faceDetect(path: String){
         
-        // Todo: real path
-       // print("\(elapsedTime()) started FC of file \(image)")
-        
-        let detector = CIDetector(ofType: "CIDetectorTypeFace", context: nil, options: [CIDetectorAccuracy: CIDetectorAccuracyHigh])
-        
-        let image = CIImage(image: image)
-        let features = detector?.features(in: image!)
-        
-       // print("\(elapsedTime()) finished FC of file \(file) detected count: \((features != nil) ? features!.count : 0)")
-        self.updateTask(downloadTask: task, desc: "Face detection finished: \((features != nil) ? features!.count : 0)")
+        print("START FACE DETECT")
+        DispatchQueue.global(qos: .background).async {
+        print("INSIDE FACE DETECT")
+        if self.bgFacedetection[path] == nil {
+            
+            self.bgFacedetection[path] = UIApplication.shared.beginBackgroundTask { [weak self] in
+                UIApplication.shared.endBackgroundTask((self?.bgFacedetection[path]!)!)
+            }
+            
+            let uiimage = UIImage(contentsOfFile: path)
+            
+            print("\(self.elapsedTime()) started FC of file \(path)")
+            
+            let detector = CIDetector(ofType: "CIDetectorTypeFace", context: nil, options: [CIDetectorAccuracy: CIDetectorAccuracyHigh])
+            
+            let image = CIImage(image: uiimage!)
+            let features = detector?.features(in: image!)
+            let count = (features != nil) ? features!.count : 0
+            
+            print("\(self.elapsedTime()) finished FC of file \(path) detected count: \(count)")
+            self.updateTask(url: path, desc: "Face detection finished, found: \(count)")
+            
+            UIApplication.shared.endBackgroundTask(self.bgFacedetection[path]!)
+            self.bgFacedetection[path] = nil;
+            
+        }
+       }
+        print("AFTER FACE DETECT")
+      
     }
     
     func updateImage(downloadTask: URLSessionDownloadTask, image: UIImage){
         DispatchQueue.main.async {
-            // print("ASYNC \(desc)")
             self.downloadState[(downloadTask.originalRequest?.url?.absoluteString)!]?.image = image;
             self.tableView.reloadData()
         }
     }
     
+    func updateTask(url: String, desc: String){
+        DispatchQueue.main.async {
+            self.downloadState[url]?.detail = desc;
+            self.tableView.reloadData()
+        }
+        
+    }
+    
     func updateTask(downloadTask: URLSessionDownloadTask, desc: String){
         DispatchQueue.main.async {
-           // print("ASYNC \(desc)")
             self.downloadState[(downloadTask.originalRequest?.url?.absoluteString)!]?.detail = desc;
             self.tableView.reloadData()
         }
@@ -125,10 +152,18 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
             print("\(elapsedTime()) finished copying file \(path)")
             
             let image = UIImage(contentsOfFile: path)
-            // todo: add in some queue
+            
             self.updateTask(downloadTask: downloadTask, desc: "Face detection started")
             self.updateImage(downloadTask: downloadTask, image: image!)
-            faceDetect(image: image!, task: downloadTask)
+            
+            if(UIApplication.shared.applicationState == .active){
+                faceDetect(path: path)
+            }
+            else if(UIApplication.shared.applicationState == .background){
+                print("scheduled for background")
+                self.fdQueue.append(path);
+            }
+            
             
         }
         catch {
@@ -138,6 +173,17 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
         
         
               
+    }
+    
+    public func handleAppActive(){
+        print("Running FD queue")
+        DispatchQueue.main.async {
+            self.tableView.reloadData();
+        }
+        while self.fdQueue.count > 0 {
+            faceDetect(path: self.fdQueue.popLast()!)
+        }
+        
     }
     
     var reachedHalf = [URL: Bool]()
@@ -157,9 +203,15 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
         
     }
     
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+         NotificationCenter.default.addObserver(self, selector: #selector(handleAppActive), name: NSNotification.Name.UIApplicationDidBecomeActive, object: nil)
+        
     }
 
     override func didReceiveMemoryWarning() {
