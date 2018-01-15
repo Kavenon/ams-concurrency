@@ -48,16 +48,14 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
         
         cell.textLabel?.text = downloadState?.task?.originalRequest?.url?.lastPathComponent;
         cell.detailTextLabel?.text = downloadState?.detail;
-        
-        
         if downloadState?.image != nil {
             cell.imageView?.image = downloadState?.image!
         }
-       
-   
+        
         return (cell);
     }
     
+    // Trigger image download
     func downloadFile(stringUrl: String){
         
         print("\(elapsedTime()) started download of file \(stringUrl)")
@@ -79,6 +77,7 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
         return (round((Date().timeIntervalSince1970 - timer)*10000)/10000);
     }
 
+    // Face detection
     func faceDetect(path: String, url: String){
         
         DispatchQueue.global(qos: .background).async {
@@ -89,6 +88,7 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
                 UIApplication.shared.endBackgroundTask((self?.bgFacedetection[path]!)!)
             }
             
+            // ------------
             let uiimage = UIImage(contentsOfFile: path)
             
             print("\(self.elapsedTime()) started FC of file \(path)")
@@ -102,6 +102,7 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
             
             print("\(self.elapsedTime()) finished FC of file \(path) detected count: \(count)")
             self.updateTask(url: url, desc: "Face detection finished, found: \(count)")
+            // ------------
             
             UIApplication.shared.endBackgroundTask(self.bgFacedetection[path]!)
             self.bgFacedetection[path] = nil;
@@ -110,8 +111,8 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
        }
     }
     
+    // Generate thumbnail and update image
     func updateImage(downloadTask: URLSessionDownloadTask, image: UIImage){
-        
         
         DispatchQueue.global(qos: .background).async {
             let path = (downloadTask.originalRequest?.url?.absoluteString)!
@@ -122,7 +123,7 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
                     UIApplication.shared.endBackgroundTask((self?.bgThumb[path]!)!)
                 }
                 
-                
+                // ------------ Generate thumbnail -------
                 let destinationSize = CGSize(width: 50, height: 50)
                 let point = CGPoint(x: 0, y: 0)
                 UIGraphicsBeginImageContext(destinationSize);
@@ -133,18 +134,20 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
                 
                 self.downloadState[path]?.image = newImage;
                 
+                // ------------
+                
                 UIApplication.shared.endBackgroundTask(self.bgThumb[path]!)
                 self.bgThumb[path] = nil;
                 
                 DispatchQueue.main.async {
                     self.tableView.reloadData()
                 }
-
                 
             }
         }
     }
     
+    // Update table row detail
     func updateTask(url: String, desc: String){
         self.downloadState[url]?.detail = desc;
         DispatchQueue.main.async {
@@ -152,10 +155,12 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
         }
     }
     
+    // Update table row detail
     func updateTask(downloadTask: URLSessionDownloadTask, desc: String){
         self.updateTask(url: (downloadTask.originalRequest?.url?.absoluteString)!, desc: desc)
     }
     
+    // Handle finish downloading
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
                            didFinishDownloadingTo location: URL){
         
@@ -164,6 +169,7 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
         
         let docDir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
 
+        // Generate path
         var path = docDir.appending("/").appending((downloadTask.response?.suggestedFilename)!)
         let fileManager = FileManager.default
         
@@ -182,6 +188,8 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
             
             self.updateTask(downloadTask: downloadTask, desc: "Face detection started")
             self.updateImage(downloadTask: downloadTask, image: image!)
+            
+            // Run or schedule face detection
             let url = (downloadTask.originalRequest?.url?.absoluteString)!
             if(UIApplication.shared.applicationState == .active){
                 faceDetect(path: path, url: url)
@@ -217,6 +225,7 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
         }
     }
     
+    // Run queue after app resumes
     public func handleAppActive(){
         
         DispatchQueue.main.async {
@@ -231,7 +240,7 @@ class ViewController: UITableViewController, URLSessionDownloadDelegate {
         
     }
     
-    
+    // Handle download progress
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64){
         
         let url = downloadTask.currentRequest?.url
